@@ -1,0 +1,12 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>../icons/load.png</file>
+    <file>../icons/monitor.png</file>
+    <file>../icons/pause.png</file>
+    <file>../icons/play.png</file>
+    <file>../icons/stop.png</file>
+    <file>../icons/equalRMS.png</file>
+    <file>../icons/logo.png</file>
+    <file>../profiles/British Crunch.tapf</file>
+</qresource>
+</RCC>

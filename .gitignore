@@ -1,0 +1,7 @@
+*.o
+moc_*.cpp
+Makefile
+.qmake.stash
+tAD
+*.AppImage
+build/*
