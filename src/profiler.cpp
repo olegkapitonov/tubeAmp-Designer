@@ -271,6 +271,8 @@ void Profiler::analyze(ProfilerPresetType preset)
     int responseDataSamplerateOversampled = responseDataSamplerate *
       RESPONSE_OVERSAMPLING_COEFF;
 
+    //int responseDataSamplerateOversampled = 44100.0 * RESPONSE_OVERSAMPLING_COEFF;
+
     int crunchTestSize = ((TEST_SIGNAL_LENGTH_SEC + TEST_SIGNAL_PAUSE_LENGTH_SEC) *
       EXPER_POINTS_NUM + 1) * responseDataSamplerate * responseDataChannels;
 
@@ -409,7 +411,7 @@ void Profiler::analyze(ProfilerPresetType preset)
   // Get test sweep signal
   QVector<float> sweepSignal(processor->getSamplingRate() * 10);
   generate_logarithmic_sweep(10.0, processor->getSamplingRate(),
-                             20.0, responseDataSamplerate / 2.0,
+                             20.0, 44100.0 / 2.0,
                              0.01,
                              sweepSignal.data());
 
