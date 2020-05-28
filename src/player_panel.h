@@ -82,6 +82,8 @@ public slots:
 
   void sliderValueChanged(int value);
   void playerEqualRMSFinished();
+
+  void stopPlayback();
 };
 
 #endif // PLAYERPANEL_H

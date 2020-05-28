@@ -311,3 +311,8 @@ void PlayerPanel::playerEqualRMSFinished()
 {
   msg->close();
 }
+
+void PlayerPanel::stopPlayback()
+{
+  buttonStopClicked();
+}

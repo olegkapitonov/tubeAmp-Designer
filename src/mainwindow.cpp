@@ -99,7 +99,7 @@ MainWindow::MainWindow(QWidget *parent, Processor *prc, Player *plr) :
   menuTools->setTitle(QApplication::translate("MainWindow", "Tools", nullptr));
   menuHelp->setTitle(QApplication::translate("MainWindow", "Help", nullptr));
 
-  profilerDialog = new ProfilerDialog(processor, player, this);
+  profilerDialog = new ProfilerDialog(processor, player, centralWidget->playerPanel, this);
   connect(profilerDialog, &ProfilerDialog::accepted,
     this,   &MainWindow::profilerDialogAccepted);
 

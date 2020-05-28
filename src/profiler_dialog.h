@@ -32,17 +32,19 @@
 #include "player.h"
 #include "profiler.h"
 #include "message_widget.h"
+#include "player_panel.h"
 
 class ProfilerDialog : public QDialog
 {
   Q_OBJECT
 
 public:
-  ProfilerDialog(Processor *prc, Player *plr, QWidget *parent = nullptr);
+  ProfilerDialog(Processor *prc, Player *plr, PlayerPanel *pnl, QWidget *parent = nullptr);
 
 private:
   Processor *processor;
   Player *player;
+  PlayerPanel *playerPanel;
 
   QComboBox *testSignalComboBox;
   QPushButton *createTestSignalWavButton;

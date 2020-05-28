@@ -24,10 +24,11 @@
 
 #include "profiler_dialog.h"
 
-ProfilerDialog::ProfilerDialog(Processor *prc, Player *plr, QWidget *parent) : QDialog(parent)
+ProfilerDialog::ProfilerDialog(Processor *prc, Player *plr, PlayerPanel *pnl, QWidget *parent) : QDialog(parent)
 {
   processor = prc;
   player = plr;
+  playerPanel = pnl;
   setMinimumWidth(600);
   setWindowTitle(tr("Profiler"));
 
@@ -103,6 +104,8 @@ void ProfilerDialog::analyzeButtonClick()
 
     connect(profiler, &Profiler::progressChanged, this,
       &ProfilerDialog::profilerProgressChanged);
+
+    connect(profiler, &Profiler::stopPlaybackNeeded, playerPanel, &PlayerPanel::stopPlayback);
 
     profiler->loadResponseFile(responseFileEdit->text());
 

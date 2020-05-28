@@ -209,6 +209,8 @@ stCrunchPoint Profiler::findCrunchPoint(int freqIndex,
 // by analyzing response signal from profiled amplifier
 void Profiler::analyze(ProfilerPresetType preset)
 {
+  emit stopPlaybackNeeded();
+
   if (responseData.size() < (int)((3285485.0 * (double)responseDataSamplerate) / 44100.0 + 1))
   {
     QMessageBox::critical(nullptr, QObject::tr("Error!"),

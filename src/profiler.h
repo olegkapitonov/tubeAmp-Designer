@@ -72,6 +72,7 @@ private slots:
 signals:
   void warningMessageNeeded(QString message);
   void progressChanged(int progress);
+  void stopPlaybackNeeded();
 };
 
 class ProfilerThread : public QThread
