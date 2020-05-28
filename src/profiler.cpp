@@ -168,9 +168,17 @@ stCrunchPoint Profiler::findCrunchPoint(int freqIndex,
     crunchPoint.max = 0.0;
     crunchPoint.maxtime = 0;
 
+    double noiseFloor = pikeArray[0].value * 1.2;
+
     for (int i = 0; i < pikeArray.size() - 1; i++)
     {
-      double errorValue = fabs(pikeArray[i].value - pow(pikeArray[i].time, 1) *
+      double denoisedValue = pikeArray[i].value - noiseFloor;
+      if (denoisedValue < 0)
+      {
+        denoisedValue = 0.0;
+      }
+
+      double errorValue = fabs(denoisedValue  - pow(pikeArray[i].time, 1) *
                                stepCoeff);
 
       if (errorValue > crunchPoint.max)
@@ -420,13 +428,20 @@ void Profiler::analyze(ProfilerPresetType preset)
        i += responseDataChannels)
   {
     sweepResponseL.append(responseData[sweepStart + i]);
-    float sum = 0.0;
-    for (int j = 1; j < responseDataChannels; j++)
+    if (responseDataChannels > 1)
     {
-      sum += responseData[sweepStart + i + j];
+      float sum = 0.0;
+      for (int j = 1; j < responseDataChannels; j++)
+      {
+        sum += responseData[sweepStart + i + j];
+      }
+      sum /= (responseDataChannels - 1);
+      sweepResponseR.append(sum);
     }
-    sum /= (responseDataChannels - 1);
-    sweepResponseR.append(sum);
+    else
+    {
+      sweepResponseR.append(responseData[sweepStart + i]);
+    }
   }
 
   // Resample to processor sampling rate
@@ -487,12 +502,19 @@ void Profiler::analyze(ProfilerPresetType preset)
   {
     realTestResponseL.append(responseData[realTestStart + i]);
     float sum = 0.0;
-    for (int j = 1; j < responseDataChannels; j++)
+    if (responseDataChannels > 1)
     {
-      sum += responseData[realTestStart + i + j];
+      for (int j = 1; j < responseDataChannels; j++)
+      {
+        sum += responseData[realTestStart + i + j];
+      }
+      sum /= (responseDataChannels - 1.0);
+      realTestResponseR.append(sum);
     }
-    sum /= (responseDataChannels - 1.0);
-    realTestResponseR.append(sum);
+    else
+    {
+      realTestResponseR.append(responseData[realTestStart + i]);
+    }
   }
 
   QVector<float> realTestResponseResampledL = resample_vector(realTestResponseL,
@@ -534,14 +556,14 @@ void Profiler::analyze(ProfilerPresetType preset)
     preamp_impulse[i] /= max_val;
   }
 
-  float cabinetImpulseEnergy = 0.0;
+  double cabinetImpulseEnergy = 0.0;
 
-  for (int i = 0; i < cabinet_impulseL.size(); i++)
+  for (int i = 0; i < 10; i++)
   {
     cabinetImpulseEnergy += pow((cabinet_impulseL[i] + cabinet_impulseR[i]) / 2.0, 2);
   }
 
-  float cabinetImpulseEnergyCoeff = sqrt(0.45 * 48000.0 /
+  double cabinetImpulseEnergyCoeff = sqrt(0.45 * 48000.0 /
     (float)processor->getSamplingRate()) /
     sqrt(cabinetImpulseEnergy);
 
