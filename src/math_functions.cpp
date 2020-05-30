@@ -609,10 +609,10 @@ void calulate_autoeq_amplitude_response(int n_spectrum,
   // Calculate average spectrums of current signal
   // and reference signal
   fft_average(current_spectrum.data(), current_signal, n_spectrum,
-    n_current_samples, FFT_AVERAGE_MAX);
+    n_current_samples, FFT_AVERAGE_MEAN);
 
   fft_average(ref_spectrum.data(), ref_signal, n_spectrum,
-    n_ref_samples, FFT_AVERAGE_MAX);
+    n_ref_samples, FFT_AVERAGE_MEAN);
 
   // Calculate diff between spectrums
   QVector<double> diff_spectrum(n_spectrum + 1);

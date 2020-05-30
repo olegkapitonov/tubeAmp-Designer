@@ -544,7 +544,6 @@ void Profiler::analyze(ProfilerPresetType preset)
   {
     realTestSignal[i] *= 0.1 / realTestSignalRMS;
   }
-
   // Normalize preamp and cabinet impulses to standard level (my standard :))
   float max_val = 0.0;
   for (int i = 0; i < preamp_impulse.size(); i++)
@@ -690,129 +689,136 @@ void Profiler::analyze(ProfilerPresetType preset)
     profile.output_level = 1/5.0;
   }
 
-  backProcessor->setProfile(profile);
-
-  // Set adjusted profile to the main Processor
   processor->setProfile(profile);
-
-  backProcessor->setPreampImpulse(preamp_impulse);
-  backProcessor->setCabinetImpulse(cabinet_impulseL, cabinet_impulseR);
-
-  // Cut signals up to multiple of FRAGM (64 samples)
-  int sizeToFragm = floor(realTestSignal.size() / (double)fragm) * fragm;
-
-  realTestSignal.resize(sizeToFragm);
-  processedDataL.resize(sizeToFragm);
-  processedDataR.resize(sizeToFragm);
-  realTestResponseResampledL.resize(sizeToFragm);
-  realTestResponseResampledR.resize(sizeToFragm);
-
-  // Get real test response from previously adjusted Processor
-  backProcessor->process(processedDataL.data(),
-                         processedDataR.data(),
-                         realTestSignal.data(),
-                         realTestSignal.size());
-
-  emit progressChanged(85);
-
-  QVector<double> processedDataDouble(processedDataL.size());
-
-  for (int i = 0; i < processedDataL.size(); i++)
-  {
-    processedDataDouble[i] = (processedDataL[i] + processedDataR[i]) / 2.0;
-  }
-
-  QVector<double> realTestResponseResampledDouble(realTestResponseResampledL.size());
-
-  for (int i = 0; i < realTestResponseResampledL.size(); i++)
-  {
-    realTestResponseResampledDouble[i] = (realTestResponseResampledL[i] +
-      realTestResponseResampledR[i]) / 2.0;
-  }
-
-  // Calculate auto-equalizer correction
-  // between real test responses from Processor
-  // and from profiled amplifier
-  int averageSpectrumSize = 4096;
-  int autoEqualazierPointsNum = 40;
-
-  processor->correctionEqualizerFLogValues.resize(autoEqualazierPointsNum);
-  processor->correctionEqualizerDbValues.resize(autoEqualazierPointsNum);
-
-  processor->correctionEqualizerFLogValues[0] = log10(10.0);
-
-  for (int i = 0; i < autoEqualazierPointsNum - 1; i++)
-  {
-    processor->correctionEqualizerFLogValues[i + 1] = (log10(20000.0) - log10(10.0)) *
-      (double)(i + 1) / (processor->correctionEqualizerFLogValues.size() - 1) + log10(10.0);
-  }
-
-  calulate_autoeq_amplitude_response(averageSpectrumSize,
-                                     backProcessor->getSamplingRate(),
-                                     processedDataDouble.data(),
-                                     processedDataDouble.size(),
-                                     realTestResponseResampledDouble.data(),
-                                     realTestResponseResampledDouble.size(),
-                                     processor->correctionEqualizerFLogValues.data(),
-                                     processor->correctionEqualizerDbValues.data(),
-                                     autoEqualazierPointsNum
-                                     );
-
-  for (int i = 0; i < processor->correctionEqualizerFLogValues.size(); i++)
-  {
-    if (processor->correctionEqualizerDbValues[i] > 20.0)
-    {
-      processor->correctionEqualizerDbValues[i] = 20.0;
-    }
-
-    if (processor->correctionEqualizerDbValues[i] < (-30.0))
-    {
-      processor->correctionEqualizerDbValues[i] = -30.0;
-    }
-  }
-
   processor->setPreampImpulse(preamp_impulse);
   processor->setCabinetImpulse(cabinet_impulseL, cabinet_impulseR);
 
-  QVector<double> w(processor->correctionEqualizerFLogValues.size());
-  QVector<double> A(processor->correctionEqualizerFLogValues.size());
+  backProcessor->setProfile(profile);
 
-  for (int i = 0; i < w.size(); i++)
+  // DIRTY HACK!!!
+  // Run Auto-Equalizer 4 times to improve accuracy.
+  // TODO: correct AutoEqualizer code so that one run is enough
+  for (int i = 0; i < 4; i++)
   {
-    w[i] = 2.0 * M_PI * pow(10.0, processor->correctionEqualizerFLogValues[i]);
-    A[i] = pow(10.0, processor->correctionEqualizerDbValues[i] / 20.0);
+    backProcessor->setPreampImpulse(processor->getPreampImpulse());
+    backProcessor->setCabinetImpulse(processor->getLeftImpulse(), processor->getRightImpulse());
+
+    // Cut signals up to multiple of FRAGM (64 samples)
+    int sizeToFragm = floor(realTestSignal.size() / (double)fragm) * fragm;
+
+    realTestSignal.resize(sizeToFragm);
+    processedDataL.resize(sizeToFragm);
+    processedDataR.resize(sizeToFragm);
+    realTestResponseResampledL.resize(sizeToFragm);
+    realTestResponseResampledR.resize(sizeToFragm);
+
+    // Get real test response from previously adjusted Processor
+    backProcessor->process(processedDataL.data(),
+                           processedDataR.data(),
+                           realTestSignal.data(),
+                           realTestSignal.size());
+
+    emit progressChanged(85);
+
+    QVector<double> processedDataDouble(processedDataL.size());
+
+    for (int i = 0; i < processedDataL.size(); i++)
+    {
+      processedDataDouble[i] = (processedDataL[i] + processedDataR[i]) / 2.0;
+    }
+
+    QVector<double> realTestResponseResampledDouble(realTestResponseResampledL.size());
+
+    for (int i = 0; i < realTestResponseResampledL.size(); i++)
+    {
+      realTestResponseResampledDouble[i] = (realTestResponseResampledL[i] +
+      realTestResponseResampledR[i]) / 2.0;
+    }
+
+    // Calculate auto-equalizer correction
+    // between real test responses from Processor
+    // and from profiled amplifier
+    int averageSpectrumSize = 4096;
+    int autoEqualazierPointsNum = 40;
+
+    processor->correctionEqualizerFLogValues.resize(autoEqualazierPointsNum);
+    processor->correctionEqualizerDbValues.resize(autoEqualazierPointsNum);
+
+    processor->correctionEqualizerFLogValues[0] = log10(10.0);
+
+    for (int i = 0; i < autoEqualazierPointsNum - 1; i++)
+    {
+      processor->correctionEqualizerFLogValues[i + 1] = (log10(20000.0) - log10(10.0)) *
+      (double)(i + 1) / (processor->correctionEqualizerFLogValues.size() - 1) + log10(10.0);
+    }
+
+    calulate_autoeq_amplitude_response(averageSpectrumSize,
+                                       backProcessor->getSamplingRate(),
+                                       processedDataDouble.data(),
+                                       processedDataDouble.size(),
+                                       realTestResponseResampledDouble.data(),
+                                       realTestResponseResampledDouble.size(),
+                                       processor->correctionEqualizerFLogValues.data(),
+                                       processor->correctionEqualizerDbValues.data(),
+                                       autoEqualazierPointsNum
+    );
+
+    /*for (int i = 0; i < processor->correctionEqualizerFLogValues.size(); i++)
+     {                                                                               *
+     if (processor->correctionEqualizerDbValues[i] > 20.0)
+     {
+     processor->correctionEqualizerDbValues[i] = 20.0;
   }
 
-  // Set correction frequency response to the main Processor
-  processor->setCabinetSumCorrectionImpulseFromFrequencyResponse(w, A);
+  if (processor->correctionEqualizerDbValues[i] < (-30.0))
+  {
+  processor->correctionEqualizerDbValues[i] = -30.0;
+  }
+  }*/
 
-  // Process dummy data to apply changes
-  QVector<float> dummyData(fragm);
-  processor->process(dummyData.data(),
-                     dummyData.data(),
-                     dummyData.data(),
-                     fragm);
+    //processor->setPreampImpulse(preamp_impulse);
+    //processor->setCabinetImpulse(cabinet_impulseL, cabinet_impulseR);
 
-  // Apply cabinet frequency response correction
-  // to cabinet impulse response
-  processor->applyCabinetSumCorrection();
-  processor->resetCabinetSumCorrection();
+    QVector<double> w(processor->correctionEqualizerFLogValues.size());
+    QVector<double> A(processor->correctionEqualizerFLogValues.size());
 
-  processor->correctionEqualizerFLogValues.resize(4);
-  processor->correctionEqualizerDbValues.resize(4);
+    for (int i = 0; i < w.size(); i++)
+    {
+      w[i] = 2.0 * M_PI * pow(10.0, processor->correctionEqualizerFLogValues[i]);
+      A[i] = pow(10.0, processor->correctionEqualizerDbValues[i] / 20.0);
+    }
 
-  processor->correctionEqualizerFLogValues[0] = log10(10.0);
-  processor->correctionEqualizerFLogValues[1] = log10(1000.0);
-  processor->correctionEqualizerFLogValues[2] = log10(20000.0);
-  processor->correctionEqualizerFLogValues[3] = log10(22000.0);
+    // Set correction frequency response to the main Processor
+    processor->setCabinetSumCorrectionImpulseFromFrequencyResponse(w, A);
 
-  processor->correctionEqualizerDbValues[0] = 0.0;
-  processor->correctionEqualizerDbValues[1] = 0.0;
-  processor->correctionEqualizerDbValues[2] = 0.0;
-  processor->correctionEqualizerDbValues[3] = 0.0;
+    // Process dummy data to apply changes
+    QVector<float> dummyData(fragm);
+    processor->process(dummyData.data(),
+                       dummyData.data(),
+                       dummyData.data(),
+                       fragm);
 
-  // Process dummy data to apply changes
-  processor->process(dummyData.data(), dummyData.data(), dummyData.data(), fragm);
+    // Apply cabinet frequency response correction
+    // to cabinet impulse response
+    processor->applyCabinetSumCorrection();
+    processor->resetCabinetSumCorrection();
+
+    processor->correctionEqualizerFLogValues.resize(4);
+    processor->correctionEqualizerDbValues.resize(4);
+
+    processor->correctionEqualizerFLogValues[0] = log10(10.0);
+    processor->correctionEqualizerFLogValues[1] = log10(1000.0);
+    processor->correctionEqualizerFLogValues[2] = log10(20000.0);
+    processor->correctionEqualizerFLogValues[3] = log10(22000.0);
+
+    processor->correctionEqualizerDbValues[0] = 0.0;
+    processor->correctionEqualizerDbValues[1] = 0.0;
+    processor->correctionEqualizerDbValues[2] = 0.0;
+    processor->correctionEqualizerDbValues[3] = 0.0;
+
+    // Process dummy data to apply changes
+    processor->process(dummyData.data(), dummyData.data(), dummyData.data(), fragm);
+  }
 
   processor->setProfileFileName(":/profiles/British Crunch.tapf");
 
