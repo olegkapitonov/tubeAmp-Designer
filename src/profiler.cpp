@@ -540,25 +540,26 @@ void Profiler::analyze(ProfilerPresetType preset)
   realTestSignalRMS = sqrt(realTestSignalRMS / realTestSignal.size());
 
   // Normalize to -20 dB standart input level
-  for (int i = 0; i<realTestSignal.size(); i++)
+  QVector<float> preampImpulseNormalizeTempBuffer(realTestSignal);
+
+  fft_convolver(preampImpulseNormalizeTempBuffer.data(),
+                preampImpulseNormalizeTempBuffer.size(),
+                preamp_impulse.data(),
+                preamp_impulse.size()
+  );
+
+  double preampImpulseNormalizeTempBufferRMS = 0.0;
+  for (int i = 0; i < preampImpulseNormalizeTempBuffer.size(); i++)
   {
-    realTestSignal[i] *= 0.1 / realTestSignalRMS;
-  }
-  // Normalize preamp and cabinet impulses to standard level (my standard :))
-  float max_val = 0.0;
-  for (int i = 0; i < preamp_impulse.size(); i++)
-  {
-    if (fabs(preamp_impulse[i]) > max_val)
-    {
-      max_val = fabs(preamp_impulse[i]);
-    }
+    preampImpulseNormalizeTempBufferRMS += pow(preampImpulseNormalizeTempBuffer[i], 2);
   }
 
-  max_val /= 0.4 * (48000.0 / (float)processor->getSamplingRate());
+  preampImpulseNormalizeTempBufferRMS = sqrt(preampImpulseNormalizeTempBufferRMS /
+  preampImpulseNormalizeTempBuffer.size());
 
   for (int i = 0; i < preamp_impulse.size(); i++)
   {
-    preamp_impulse[i] /= max_val;
+    preamp_impulse[i] *= 0.04 / preampImpulseNormalizeTempBufferRMS;
   }
 
   QVector<float> processedDataL(realTestSignal.size());
