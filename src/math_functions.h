@@ -44,7 +44,8 @@ void fft_deconvolver(float signal_a[],
                      float impulse_response[],
                      int ir_n_count,
                      float lowcut_relative_frequency,
-                     float highcut_relative_frequency
+                     float highcut_relative_frequency,
+                     float noisegate_threshold_db
                     );
 
 enum FFT_AVERAGE_TYPE {FFT_AVERAGE_MEAN, FFT_AVERAGE_MAX};

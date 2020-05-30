@@ -344,7 +344,8 @@ void fft_deconvolver(float signal_a[],
                      float impulse_response[],
                      int ir_n_count,
                      float lowcut_relative_frequency,
-                     float highcut_relative_frequency
+                     float highcut_relative_frequency,
+                     float noisegate_threshold_db
                     )
 {
   int n_count = signal_c_n_count;
@@ -447,10 +448,94 @@ void fft_deconvolver(float signal_a[],
   fftw_execute(p);
   fftw_destroy_plan(p);
 
-  // Normalize impulse response
+  QVector<float> IR_internal(ir_n_count);
+
+  // Normalize impulse response and apply noise gate
+  float irMax = 0.0;
   for (int i = 0; i < ir_n_count; i++)
   {
-    impulse_response[i] = impulse_response_double[i] / n_count;
+    IR_internal[i] = impulse_response_double[i] / n_count;
+    if (fabs(IR_internal[i]) > irMax)
+    {
+      irMax = fabs(IR_internal[i]);
+    }
+  }
+
+  // Apply noisegate
+
+  float noisegate_threshold = pow(10.0, noisegate_threshold_db / 20.0);
+
+  float noiseGateThresholdOff = 0.9 * irMax * noisegate_threshold;
+  float noiseGateThresholdOn = 1.1 * irMax * noisegate_threshold;
+
+  bool noiseGateOn = false;
+
+  for (int i = 0; i < ir_n_count; i++)
+  {
+    if (fabs(IR_internal[i]) <= noiseGateThresholdOff)
+    {
+      noiseGateOn = false;
+    }
+
+    if (fabs(IR_internal[i]) >= noiseGateThresholdOn)
+    {
+      noiseGateOn = true;
+    }
+
+    if (!noiseGateOn)
+    {
+      IR_internal[i] = 0.0;
+    }
+  }
+
+  // Calculated frequency response is not accurate.
+  // This may lead to problems in impulse response -
+  // it will start at time t < 0 instead of t = 0
+  // We have no negative time in IR_internal buffer,
+  // so n first samples of the responce will be placed
+  // at the end of the response (inverse FFT has that effect).
+
+  // We must return this samples back to the beginning
+  // by circular rotating of the buffer.
+  // For this:
+  // 1. Find number of sample at which impulse response starts.
+  // At this sample RMS amplitude will jump sharply
+  // to the value near max_sample
+
+  int impulse_start_sample = 0;
+
+  for (int i = (ir_n_count - 1); i >= 4; i--)
+  {
+    double rms = sqrt((pow(
+      IR_internal[i], 2) +
+    pow(IR_internal[i - 1], 2) +
+    pow(IR_internal[i - 2], 2) +
+    pow(IR_internal[i - 3], 2) +
+    pow(IR_internal[i - 4], 2)
+    ) / 5.0);
+
+    if (rms < irMax / 100.0)
+    {
+      impulse_start_sample = i;
+      break;
+    }
+  }
+  // 2. Perform circular rotation
+  for (int i = impulse_start_sample; i < ir_n_count; i++)
+  {
+    impulse_response[i - impulse_start_sample] = IR_internal[i];
+  }
+
+  for (int i = 0; i < impulse_start_sample; i++)
+  {
+    impulse_response[i + ir_n_count - impulse_start_sample] = IR_internal[i];
+  }
+
+  // 3. Suppress possible remaining artifacts at the end of the buffer
+
+  for (int i = 0.99 * ir_n_count; i < ir_n_count; i++)
+  {
+    impulse_response[i] = 0.0;
   }
 }
 

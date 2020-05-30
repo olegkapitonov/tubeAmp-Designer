@@ -473,7 +473,8 @@ void Profiler::analyze(ProfilerPresetType preset)
                      cabinet_impulseL.data(),
                      cabinet_impulseL.size(),
                      30.0 / processor->getSamplingRate(),
-                     10000.0 / processor->getSamplingRate()
+                     10000.0 / processor->getSamplingRate(),
+                     -32.0
                  );
 
   fft_deconvolver(sweepSignal.data(),
@@ -483,7 +484,8 @@ void Profiler::analyze(ProfilerPresetType preset)
                      cabinet_impulseR.data(),
                      cabinet_impulseR.size(),
                      30.0 / processor->getSamplingRate(),
-                     10000.0 / processor->getSamplingRate()
+                     10000.0 / processor->getSamplingRate(),
+                     -32.0
                  );
 
   emit progressChanged(75);
@@ -562,7 +564,7 @@ void Profiler::analyze(ProfilerPresetType preset)
 
   double cabinetImpulseEnergy = 0.0;
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < cabinet_impulseL.size(); i++)
   {
     cabinetImpulseEnergy += pow((cabinet_impulseL[i] + cabinet_impulseR[i]) / 2.0, 2);
   }

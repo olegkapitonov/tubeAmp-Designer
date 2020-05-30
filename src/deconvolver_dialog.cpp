@@ -270,7 +270,8 @@ void DeconvolverDialog::processButtonClicked()
                   IRL.data(),
                   IRL.size(),
                   20.0 / processor->getSamplingRate(),
-                  20000.0 / processor->getSamplingRate()
+                  20000.0 / processor->getSamplingRate(),
+                  -60.0
                  );
 
   fft_deconvolver(testR.data(),
@@ -280,7 +281,8 @@ void DeconvolverDialog::processButtonClicked()
                   IRR.data(),
                   IRR.size(),
                   20.0 / processor->getSamplingRate(),
-                  20000.0 / processor->getSamplingRate()
+                  20000.0 / processor->getSamplingRate(),
+                  -60.0
                  );
 
   float cabinetImpulseEnergy = 0.0;
