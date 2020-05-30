@@ -213,6 +213,10 @@ void ConvolverDialog::processButtonClicked()
         }
       }
     }
+    else
+    {
+      return;
+    }
   }
   else
   {
@@ -260,6 +264,10 @@ void ConvolverDialog::processButtonClicked()
         IRR[i] = tempBuffer[i];
       }
     }
+  }
+  else
+  {
+    return;
   }
 
   int outputSampleRate;

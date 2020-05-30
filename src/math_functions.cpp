@@ -431,7 +431,7 @@ void fft_deconvolver(float signal_a[],
     gsl_complex freq = gsl_complex_rect(impulse_response_spectrum[i].real,
                                         impulse_response_spectrum[i].imagine);
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < 7; j++)
     {
       freq = gsl_complex_mul(freq, lowcut_A);
       freq = gsl_complex_mul(freq, highcut_A);

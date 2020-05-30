@@ -202,6 +202,10 @@ void DeconvolverDialog::processButtonClicked()
       }
     }
   }
+  else
+  {
+    return;
+  }
 
   sfinfo.format = 0;
 
@@ -242,6 +246,10 @@ void DeconvolverDialog::processButtonClicked()
         responseR[i] = tempBuffer[i];
       }
     }
+  }
+  else
+  {
+    return;
   }
 
   int IRSampleRate;

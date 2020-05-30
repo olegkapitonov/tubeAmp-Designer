@@ -1,4 +1,5 @@
-project('tubeAmp Designer', 'cpp', version: '1.2', license: ['GPL3'])
+project('tubeAmp Designer', 'cpp', version: '1.2', license: ['GPL3'],
+  default_options : ['buildtype=release'])
 
 qt5 = import('qt5')
 
