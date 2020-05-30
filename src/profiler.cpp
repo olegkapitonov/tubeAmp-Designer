@@ -562,23 +562,6 @@ void Profiler::analyze(ProfilerPresetType preset)
     preamp_impulse[i] /= max_val;
   }
 
-  double cabinetImpulseEnergy = 0.0;
-
-  for (int i = 0; i < cabinet_impulseL.size(); i++)
-  {
-    cabinetImpulseEnergy += pow((cabinet_impulseL[i] + cabinet_impulseR[i]) / 2.0, 2);
-  }
-
-  double cabinetImpulseEnergyCoeff = sqrt(0.45 * 48000.0 /
-    (float)processor->getSamplingRate()) /
-    sqrt(cabinetImpulseEnergy);
-
-  for (int i = 0; i < cabinet_impulseL.size(); i++)
-  {
-    cabinet_impulseL[i] *= cabinetImpulseEnergyCoeff;
-    cabinet_impulseR[i] *= cabinetImpulseEnergyCoeff;
-  }
-
   QVector<float> processedDataL(realTestSignal.size());
   QVector<float> processedDataR(realTestSignal.size());
 
@@ -625,7 +608,7 @@ void Profiler::analyze(ProfilerPresetType preset)
     profile.sag_time = 0.3;
     profile.sag_coeff = 0.0;
 
-    profile.output_level = 0.34;
+    profile.output_level = 1.0/7.5;
   }
 
   if (preset == CLASSIC_PRESET)
@@ -840,7 +823,99 @@ void Profiler::analyze(ProfilerPresetType preset)
 
   // Equalize RMS of the real test response from profiled amplifier
   // with sound from the Processor
-  player->equalDataRMS();
+  // Normalize cabinet impulse to -20 dB level
+  {
+    QVector<float> processedDataL(player->diData.size());
+    QVector<float> processedDataR(player->diData.size());
+
+    QSharedPointer<Processor> backProcessor
+    = QSharedPointer<Processor>(new Processor(processor->getSamplingRate()));
+
+    backProcessor->loadProfile(processor->getProfileFileName());
+
+    backProcessor->setControls(processor->getControls());
+    backProcessor->setProfile(processor->getProfile());
+
+    backProcessor->setPreampImpulse(processor->getPreampImpulse());
+    backProcessor->setCabinetImpulse(processor->getLeftImpulse(),
+                                     processor->getRightImpulse());
+
+    QVector<double> w(processor->correctionEqualizerFLogValues.size());
+    QVector<double> A(processor->correctionEqualizerFLogValues.size());
+
+    if (processor->correctionEqualizerFLogValues.size() >= 3)
+    {
+      for (int i = 0; i < w.size(); i++)
+      {
+        w[i] = 2.0 * M_PI * pow(10.0, processor->correctionEqualizerFLogValues[i]);
+        A[i] = pow(10.0, processor->correctionEqualizerDbValues[i] / 20.0);
+      }
+
+      backProcessor->setCabinetSumCorrectionImpulseFromFrequencyResponse(w, A);
+    }
+
+    if (processor->preampCorrectionEqualizerFLogValues.size() >= 3)
+    {
+      w.resize(processor->preampCorrectionEqualizerFLogValues.size());
+      A.resize(processor->preampCorrectionEqualizerFLogValues.size());
+
+      for (int i = 0; i < w.size(); i++)
+      {
+        w[i] = 2.0 * M_PI * pow(10.0, processor->preampCorrectionEqualizerFLogValues[i]);
+        A[i] = pow(10.0, processor->preampCorrectionEqualizerDbValues[i] / 20.0);
+      }
+
+      backProcessor->setPreampCorrectionImpulseFromFrequencyResponse(w, A);
+    }
+
+    int sizeToFragm = floor(player->diData.size() / (double)fragm) * fragm;
+
+    processedDataL.resize(sizeToFragm);
+    processedDataR.resize(sizeToFragm);
+
+    backProcessor->process(processedDataL.data(),
+                           processedDataR.data(),
+                           player->diData.data(),
+                           sizeToFragm);
+
+    double rmsProcessedData = 0.0;
+    for (int i = 0; i < processedDataL.size(); i++)
+    {
+      rmsProcessedData += pow((processedDataL[i] +
+      processedDataR[i]) / 2.0, 2);
+    }
+    rmsProcessedData = sqrt(rmsProcessedData / processedDataL.size());
+
+    double cabinetImpulseCorrectionCoeff = 0.1 / rmsProcessedData;
+
+    QVector<float> cabinetImpulseCorrectonBufferL = processor->getLeftImpulse();
+    QVector<float> cabinetImpulseCorrectonBufferR = processor->getRightImpulse();
+
+    for (int i = 0; i < cabinet_impulseL.size(); i++)
+    {
+      cabinetImpulseCorrectonBufferL[i] *= cabinetImpulseCorrectionCoeff;
+      cabinetImpulseCorrectonBufferR[i] *= cabinetImpulseCorrectionCoeff;
+    }
+
+    processor->setCabinetImpulse(cabinetImpulseCorrectonBufferL,
+                                 cabinetImpulseCorrectonBufferR
+    );
+
+    double rmsRefData = 0.0;
+    for (int i = 0; i < player->refDataL.size(); i++)
+    {
+      rmsRefData += pow((player->refDataL[i] + player->refDataR[i]) / 2.0, 2);
+    }
+    rmsRefData = sqrt(rmsRefData / player->refDataL.size());
+
+    double rmsRatio = rmsRefData / 0.1;
+
+    for (int i = 0; i < player->refDataL.size(); i++)
+    {
+      player->refDataL[i] /= rmsRatio;
+      player->refDataR[i] /= rmsRatio;
+    }
+  }
 }
 
 void Profiler::createTestFile(QString fileName, int version)
