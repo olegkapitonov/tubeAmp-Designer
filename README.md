@@ -1,7 +1,7 @@
 tubeAmp Designer
 ================
 
-Last release is 1.2.
+Latest release is 1.2.1
 
 [Official site](https://kpp-tubeamp.com)
 
@@ -9,7 +9,8 @@ Last release is 1.2.
 
 Binary files are available for Linux 64-bit systems.
 Source code can be compiled for Linux 64-bit or 32-bit.
-Windows versions are planned for the future.
+
+**EXPERIMENTAL** Win64 version now available [here](https://kpp-tubeamp.com/downloads)!
 
 ![Screenshot](images/tAD.jpg)
 
