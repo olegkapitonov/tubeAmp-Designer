@@ -23,13 +23,219 @@
 
 #include "player.h"
 
+#define SAMPLE_RATE         (48000)
+#define PA_SAMPLE_TYPE      paFloat32
+#define FRAMES_PER_BUFFER   (256)
+
 #define RMS_COUNT_MAX 4800
 
 int peakRMScount = 0;
 double peakInputRMSsum = 0.0;
 double peakOutputRMSsum = 0.0;
 
-static int process (jack_nframes_t nframes, void *arg)
+static int process( const void *inputBuffer, void *outputBuffer,
+                         unsigned long framesPerBuffer,
+                         const PaStreamCallbackTimeInfo* timeInfo,
+                         PaStreamCallbackFlags statusFlags,
+                         void *userData )
+{
+  float *out = (float*)outputBuffer;
+  float *in = (float*)inputBuffer;
+  (void) timeInfo; /* Prevent unused variable warnings. */
+  (void) statusFlags;
+  Player *inst = (Player *)userData;
+
+  QVector<float> outL(framesPerBuffer);
+  QVector<float> outR(framesPerBuffer);
+
+  switch (inst->status)
+  {
+    case Player::PlayerStatus::PS_STOP:
+    {
+      inst->diPos = 0;
+      inst->refPos = 0;
+
+      memset(outL.data(), 0, sizeof (float) * framesPerBuffer);
+      memset(outR.data(), 0, sizeof (float) * framesPerBuffer);
+    }
+    break;
+    case Player::PlayerStatus::PS_PAUSE:
+    {
+      memset(outL.data(), 0, sizeof (float) * framesPerBuffer);
+      memset(outR.data(), 0, sizeof (float) * framesPerBuffer);
+    }
+    break;
+    case Player::PlayerStatus::PS_PLAY_DI:
+    {
+      if (inst->diData.size() != 0)
+      {
+        if ((inst->diPos + framesPerBuffer) > (unsigned int)inst->diData.size())
+        {
+          QVector<float> tempBuffer(framesPerBuffer);
+
+          for (unsigned int i = inst->diPos;
+               i < (unsigned int)inst->diData.size(); i++)
+               {
+                 tempBuffer[i - inst->diPos] = inst->diData[i];
+                 peakInputRMSsum += pow(inst->diData[i], 2);
+               }
+
+               for (unsigned int i = 0;
+                    i < (framesPerBuffer - inst->diData.size() + inst->diPos); i++)
+                    {
+                      tempBuffer[i + inst->diData.size() - inst->diPos] = inst->diData[i];
+                      peakInputRMSsum += pow(inst->diData[i], 2);
+                      inst->incRMScounter();
+                    }
+
+                    inst->processor->process(outL.data(),
+                                             outR.data(),
+                                             tempBuffer.data(),
+                                             framesPerBuffer);
+
+                    for (unsigned int i = 0; i < framesPerBuffer; i++)
+                    {
+                      peakOutputRMSsum += pow(outL[i], 2);
+                    }
+
+                    inst->diPos = inst->diPos + framesPerBuffer - inst->diData.size();
+        }
+        else
+        {
+          for (unsigned int i = 0; i < framesPerBuffer; i++)
+          {
+            peakInputRMSsum += pow(inst->diData[i + inst->diPos], 2);
+            inst->incRMScounter();
+          }
+          inst->processor->process(outL.data(),
+                                   outR.data(),
+                                   inst->diData.data() + inst->diPos,
+                                   framesPerBuffer);
+
+          for (unsigned int i = 0; i < framesPerBuffer; i++)
+          {
+            peakOutputRMSsum += pow(outL[i], 2);
+          }
+
+          inst->diPos += framesPerBuffer;
+        }
+
+        if ((inst->refPos + framesPerBuffer) > (unsigned int)inst->refDataL.size())
+        {
+          inst->refPos = inst->refPos + framesPerBuffer - inst->refDataL.size();
+        }
+        else
+        {
+          inst->refPos += framesPerBuffer;
+        }
+      }
+      else
+      {
+        memset(outL.data(), 0, sizeof (float) * framesPerBuffer);
+        memset(outR.data(), 0, sizeof (float) * framesPerBuffer);
+      }
+    }
+    break;
+    case Player::PlayerStatus::PS_PLAY_REF:
+    {
+      if (inst->refDataL.size() != 0)
+      {
+        if ((inst->refPos + framesPerBuffer) > (unsigned int)inst->refDataL.size())
+        {
+          for (int i = inst->refPos; i < inst->refDataL.size(); i++)
+          {
+            outL[i - inst->refPos] = inst->refDataL[i] * inst->getLevel();
+            peakInputRMSsum += 0.0;
+            peakOutputRMSsum += pow(outL[i - inst->refPos], 2);
+            inst->incRMScounter();
+          }
+
+          for (unsigned int i = 0;
+               i < (framesPerBuffer - inst->refDataL.size() + inst->refPos); i++)
+               {
+                 outL[i + inst->refDataL.size() - inst->refPos] = inst->refDataL[i] *
+                 inst->getLevel();
+                 peakInputRMSsum += 0.0;
+                 peakOutputRMSsum += pow(outL[i + inst->refDataL.size() - inst->refPos], 2);
+                 inst->incRMScounter();
+               }
+
+               for (int i = inst->refPos; i < inst->refDataR.size(); i++)
+               {
+                 outR[i - inst->refPos] = inst->refDataR[i] * inst->getLevel();
+               }
+
+               for (unsigned int i = 0;
+                    i < (framesPerBuffer - inst->refDataR.size() + inst->refPos); i++)
+                    {
+                      outR[i + inst->refDataR.size() - inst->refPos] = inst->refDataR[i] *
+                      inst->getLevel();
+                    }
+
+                    inst->refPos = inst->refPos + framesPerBuffer - inst->refDataL.size();
+        }
+        else
+        {
+          for (unsigned int i = inst->refPos; i < framesPerBuffer + inst->refPos; i++)
+          {
+            outL[i - inst->refPos] = inst->refDataL[i] * inst->getLevel();
+            peakInputRMSsum += 0.0;
+            peakOutputRMSsum += pow(outL[i - inst->refPos], 2);
+            inst->incRMScounter();
+          }
+
+          for (unsigned int i = inst->refPos; i < framesPerBuffer + inst->refPos; i++)
+          {
+            outR[i - inst->refPos] = inst->refDataR[i] * inst->getLevel();
+          }
+
+          inst->refPos += framesPerBuffer;
+        }
+
+        if ((inst->diPos + framesPerBuffer) > (unsigned int)inst->diData.size())
+        {
+          inst->diPos = inst->diPos + framesPerBuffer - inst->diData.size();
+        }
+        else
+        {
+          inst->diPos += framesPerBuffer;
+        }
+      }
+      else
+      {
+        memset(outL.data(), 0, sizeof (float) * framesPerBuffer);
+        memset(outR.data(), 0, sizeof (float) * framesPerBuffer);
+      }
+    }
+    break;
+    case Player::PlayerStatus::PS_MONITOR:
+    {
+      for (unsigned int i = 0; i < framesPerBuffer; i++)
+      {
+        in[i] *= inst->inputLevel;
+        peakInputRMSsum += pow(in[i], 2);
+        inst->incRMScounter();
+      }
+      inst->processor->process(outL.data(), outR.data(), in, framesPerBuffer);
+
+      for (unsigned int i = 0; i < framesPerBuffer; i++)
+      {
+        peakOutputRMSsum += pow(outL[i], 2);
+      }
+    }
+    break;
+  }
+
+  for (int i = 0; i < outL.size(); i++)
+  {
+    out[i*2] = outL[i];
+    out[i*2 + 1] = outR[i];
+  }
+  return paContinue;
+}
+
+
+/*static int process (jack_nframes_t nframes, void *arg)
 {
   jack_default_audio_sample_t *in, *outL, *outR;
 
@@ -220,34 +426,7 @@ static int process (jack_nframes_t nframes, void *arg)
     break;
   }
   return 0;
-}
-
-static void session_callback(jack_session_event_t *event, void *arg)
-{
-  Player *inst = (Player *)arg;
-
-  char retval[100];
-  printf ("session notification\n");
-  printf ("path %s, uuid %s, type: %s\n", event->session_dir,
-          event->client_uuid, event->type == JackSessionSave ? "save" : "quit");
-
-
-  snprintf (retval, 100, "jack_simple_session_client %s", event->client_uuid);
-  event->command_line = strdup (retval);
-
-  jack_session_reply( inst->client, event );
-
-  if (event->type == JackSessionSaveAndQuit) {
-    inst->simple_quit = 1;
-  }
-
-  jack_session_event_free(event);
-}
-
-static void jack_shutdown(void*)
-{
-	exit (1);
-}
+}*/
 
 Player::Player()
 {
@@ -264,7 +443,7 @@ Player::Player()
 
 Player::~Player()
 {
-  jack_client_close(client);
+  Pa_Terminate();
 }
 
 void Player::incRMScounter()
@@ -286,88 +465,51 @@ void Player::incRMScounter()
   }
 }
 
-int Player::connectToJack()
+int Player::connectToPortAudio()
 {
-  jack_status_t status;
-  const char *client_name = "tubeAmp Designer";
+  err = Pa_Initialize();
+  if( err != paNoError ) return 1;
 
-  /* open a client connection to the JACK server */
-
-  client = jack_client_open (client_name, JackNoStartServer, &status );
-
-  if (client == NULL)
-  {
-    fprintf (stderr, "jack_client_open() failed, status = 0x%2.0x\n", status);
-    if (status & JackServerFailed)
-    {
-      fprintf (stderr, "Unable to connect to JACK server\n");
-    }
+  inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+  if (inputParameters.device == paNoDevice) {
+    fprintf(stderr,"Error: No default input device.\n");
     return 1;
   }
-  if (status & JackServerStarted)
-  {
-    fprintf (stderr, "JACK server started\n");
-  }
-  if (status & JackNameNotUnique)
-  {
-    client_name = jack_get_client_name(client);
-  }
+  inputParameters.channelCount = 1;       /* stereo input */
+  inputParameters.sampleFormat = PA_SAMPLE_TYPE;
+  inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
+  inputParameters.hostApiSpecificStreamInfo = NULL;
 
-  /* tell the JACK server to call `process()' whenever
-    there is work to be done.
-  */
-
-  jack_set_process_callback(client, process, this);
-
-  /* tell the JACK server to call `jack_shutdown()' if
-  it ever shuts down, either entirely, or if it
-  just decides to stop calling us.
-  */
-
-  jack_on_shutdown(client, jack_shutdown, this);
-
-  /* tell the JACK server to call `session_callback()' if
-  the session is saved.
-  */
-
-  jack_set_session_callback(client, session_callback, this);
-
-  /* display the current sample rate.
-  */
-
-  printf ("engine sample rate: %" PRIu32 "\n", jack_get_sample_rate (client));
-  sampleRate = jack_get_sample_rate (client);
-
-/* create two ports */
-
-  input_port = jack_port_register (client, "input",
-    JACK_DEFAULT_AUDIO_TYPE,
-    JackPortIsInput, 0);
-
-  output_port_left = jack_port_register (client, "outputL",
-  JACK_DEFAULT_AUDIO_TYPE,
-    JackPortIsOutput, 0);
-
-  output_port_right = jack_port_register (client, "outputR",
-  JACK_DEFAULT_AUDIO_TYPE,
-    JackPortIsOutput, 0);
-
-  if ((input_port == NULL) || (output_port_left == NULL) || (output_port_right == NULL))
-  {
-    fprintf(stderr, "no more JACK ports available\n");
+  outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+  if (outputParameters.device == paNoDevice) {
+    fprintf(stderr,"Error: No default output device.\n");
     return 1;
   }
+  outputParameters.channelCount = 2;       /* stereo output */
+  outputParameters.sampleFormat = PA_SAMPLE_TYPE;
+  outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
+  outputParameters.hostApiSpecificStreamInfo = NULL;
+
+  err = Pa_OpenStream(
+    &stream,
+    &inputParameters,
+    &outputParameters,
+    SAMPLE_RATE,
+    FRAMES_PER_BUFFER,
+    0, /* paClipOff, */  /* we won't output out of range samples so don't bother clipping them */
+    process,
+    this );
+  if( err != paNoError ) return 1;
+
+  sampleRate = SAMPLE_RATE;
 
   return 0;
 }
 
 int Player::activate()
 {
-  if (jack_activate(client))
-  {
-    fprintf (stderr, "cannot activate client");
-    return 1;
-  }
+  err = Pa_StartStream( stream );
+  if( err != paNoError ) return 1;
 
   return 0;
 }

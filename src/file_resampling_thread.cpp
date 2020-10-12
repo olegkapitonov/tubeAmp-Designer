@@ -29,7 +29,7 @@ void FileResamplingThread::run()
 {
   if (!filename.isEmpty())
   {
-    loadFile(filename.toUtf8().constData());
+    loadFile(filename.toLocal8Bit().constData());
   }
 }
 

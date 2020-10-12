@@ -27,7 +27,7 @@
 
 #include "profile.h"
 
-#include <zita-convolver.h>
+#include <../thirdparty/zita-convolver.h>
 
 // Defines for compatability with
 // FAUST generated code
@@ -67,7 +67,7 @@
 // Zita-convolver parameters
 #define CONVPROC_SCHEDULER_PRIORITY 0
 #define CONVPROC_SCHEDULER_CLASS SCHED_FIFO
-#define THREAD_SYNC_MODE true
+//#define THREAD_SYNC_MODE true
 
 #define fragm 64
 
@@ -171,7 +171,7 @@ private:
   bool preampCorrectionEnabled;
   bool cabinetCorrectionEnabled;
 
-  ConvolverDeleteThread *convolverDeleteThread;
+  //ConvolverDeleteThread *convolverDeleteThread;
 
   QString currentProfileFile;
   int samplingRate;

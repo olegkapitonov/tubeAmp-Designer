@@ -48,7 +48,7 @@ Processor::Processor(int SR)
   dsp = new mydsp();
   dsp->profile = nullptr;
 
-  convolverDeleteThread = new ConvolverDeleteThread();
+  //convolverDeleteThread = new ConvolverDeleteThread();
 }
 
 Processor::~Processor()
@@ -58,7 +58,7 @@ Processor::~Processor()
 
 void Processor::cleanProfile()
 {
-  delete preamp_convproc;
+  /*delete preamp_convproc;
   delete preamp_correction_convproc;
   delete convproc;
   delete correction_convproc;
@@ -66,7 +66,7 @@ void Processor::cleanProfile()
   delete new_preamp_convproc;
   delete new_preamp_correction_convproc;
   delete new_convproc;
-  delete new_correction_convproc;
+  delete new_correction_convproc;*/
 
   delete dsp->profile;
   delete dsp;
@@ -105,7 +105,7 @@ int Processor::checkProfileFile(const char *path)
 
 bool Processor::loadProfile(QString filename)
 {
-  if (!checkProfileFile(filename.toUtf8().constData()))
+  if (!checkProfileFile(filename.toLocal8Bit().constData()))
   {
     return false;
   }
@@ -240,7 +240,7 @@ bool Processor::loadProfile(QString filename)
 
 bool Processor::saveProfile(QString filename)
 {
-  FILE * profile_file= fopen(filename.toUtf8().constData(), "wb");
+  FILE * profile_file= fopen(filename.toLocal8Bit().constData(), "wb");
   if (profile_file != NULL)
   {
     QVector<float> savePreampImpulse;
@@ -537,29 +537,28 @@ void Processor::process(float *outL, float *outR, float *in, int nSamples)
 
   if (new_preamp_convproc != nullptr)
   {
-    freeConvolver(preamp_convproc);
+    //freeConvolver(preamp_convproc);
     preamp_convproc = new_preamp_convproc;
     new_preamp_convproc = nullptr;
   }
 
   if (new_preamp_correction_convproc != nullptr)
   {
-    freeConvolver(preamp_correction_convproc);
+    //freeConvolver(preamp_correction_convproc);
     preamp_correction_convproc = new_preamp_correction_convproc;
     new_preamp_correction_convproc = nullptr;
-    //printf("Exchanged preamp correction convproc\n");
   }
 
   if (new_convproc != nullptr)
   {
-    freeConvolver(convproc);
+    //freeConvolver(convproc);
     convproc = new_convproc;
     new_convproc = nullptr;
   }
 
   if (new_correction_convproc != nullptr)
   {
-    freeConvolver(correction_convproc);
+    //freeConvolver(correction_convproc);
     correction_convproc = new_correction_convproc;
     new_correction_convproc = nullptr;
   }
@@ -643,6 +642,9 @@ void Processor::process(float *outL, float *outR, float *in, int nSamples)
 
 void Processor::freeConvolver(Convproc *convolver)
 {
+  auto convolverDeleteThread = new ConvolverDeleteThread();
+  QObject::connect(convolverDeleteThread, &QThread::finished,
+                   convolverDeleteThread, &QThread::deleteLater);
   convolverDeleteThread->convolver = convolver;
   convolverDeleteThread->start();
 }

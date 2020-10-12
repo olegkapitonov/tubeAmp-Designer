@@ -27,7 +27,7 @@
 
 #include "math_functions.h"
 
-#include <zita-resampler/resampler.h>
+#include <../thirdparty/resampler.h>
 
 // Function converts amplitude-frequency response
 // to time domain impulse response.

@@ -269,7 +269,7 @@ void CabinetEditWidget::saveButtonClicked()
     sfinfo.sections = 1;
     sfinfo.seekable = 1;
 
-    SNDFILE *impulseFile = sf_open(saveFileName.toUtf8().constData(), SFM_WRITE, &sfinfo);
+    SNDFILE *impulseFile = sf_open(saveFileName.toLocal8Bit().constData(), SFM_WRITE, &sfinfo);
     if (impulseFile != NULL)
     {
       QVector<float> tempBuffer(left_impulse.size() * 2);

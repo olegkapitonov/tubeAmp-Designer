@@ -180,7 +180,7 @@ void ConvolverDialog::processButtonClicked()
   {
     sfinfo.format = 0;
 
-    sndFile = sf_open(inputFileName.toUtf8().constData(), SFM_READ, &sfinfo);
+    sndFile = sf_open(inputFileName.toLocal8Bit().constData(), SFM_READ, &sfinfo);
     if (sndFile != NULL)
     {
       inputSampleRate = sfinfo.samplerate;
@@ -232,7 +232,7 @@ void ConvolverDialog::processButtonClicked()
 
   int IRSampleRate;
 
-  sndFile = sf_open(IRFileName.toUtf8().constData(), SFM_READ, &sfinfo);
+  sndFile = sf_open(IRFileName.toLocal8Bit().constData(), SFM_READ, &sfinfo);
   if (sndFile != NULL)
   {
     IRSampleRate = sfinfo.samplerate;
@@ -324,7 +324,7 @@ void ConvolverDialog::processButtonClicked()
     sfinfo.sections = 1;
     sfinfo.seekable = 1;
 
-    SNDFILE *outputFile = sf_open(outputFileName.toUtf8().constData(),
+    SNDFILE *outputFile = sf_open(outputFileName.toLocal8Bit().constData(),
       SFM_WRITE, &sfinfo);
 
     if (outputFile != NULL)

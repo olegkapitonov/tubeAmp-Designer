@@ -68,9 +68,11 @@ private:
 
 private slots:
   void warningMessageNeededSlot(QString message);
+  void errorMessageNeededSlot(QString message);
 
 signals:
   void warningMessageNeeded(QString message);
+  void errorMessageNeeded(QString message);
   void progressChanged(int progress);
   void stopPlaybackNeeded();
 };

@@ -35,13 +35,12 @@ int main(int argc, char *argv[])
 
   QTranslator translator;
   QDir appdir(a.applicationDirPath());
-  appdir.cdUp();
-  appdir.cd("share/tubeAmp Designer/translations");
   translator.load("tAD_" + QLocale::system().name(), appdir.absolutePath());
+  
   a.installTranslator(&translator);
 
   Player *playerInstance = new Player();
-  if (playerInstance->connectToJack() == 1)
+  if (playerInstance->connectToPortAudio() == 1)
   {
     QMessageBox::critical(nullptr, "Error!",
       "Unable to connect to JACK server!");

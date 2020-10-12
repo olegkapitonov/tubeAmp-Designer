@@ -169,7 +169,7 @@ void DeconvolverDialog::processButtonClicked()
 
   sfinfo.format = 0;
 
-  sndFile = sf_open(testFileName.toUtf8().constData(), SFM_READ, &sfinfo);
+  sndFile = sf_open(testFileName.toLocal8Bit().constData(), SFM_READ, &sfinfo);
   if (sndFile != NULL)
   {
     testSampleRate = sfinfo.samplerate;
@@ -214,7 +214,7 @@ void DeconvolverDialog::processButtonClicked()
 
   int responseSampleRate;
 
-  sndFile = sf_open(responseFileName.toUtf8().constData(), SFM_READ, &sfinfo);
+  sndFile = sf_open(responseFileName.toLocal8Bit().constData(), SFM_READ, &sfinfo);
   if (sndFile != NULL)
   {
     responseSampleRate = sfinfo.samplerate;
@@ -319,7 +319,7 @@ void DeconvolverDialog::processButtonClicked()
     sfinfo.sections = 1;
     sfinfo.seekable = 1;
 
-    SNDFILE *outputFile = sf_open(IRFileName.toUtf8().constData(),
+    SNDFILE *outputFile = sf_open(IRFileName.toLocal8Bit().constData(),
       SFM_WRITE, &sfinfo);
 
     if (outputFile != NULL)
@@ -400,7 +400,7 @@ void DeconvolverDialog::saveTestSignalButtonClicked()
     sfinfo.sections = 1;
     sfinfo.seekable = 1;
 
-    SNDFILE *outputFile = sf_open(testFileName.toUtf8().constData(),
+    SNDFILE *outputFile = sf_open(testFileName.toLocal8Bit().constData(),
       SFM_WRITE, &sfinfo);
 
     if (outputFile != NULL)

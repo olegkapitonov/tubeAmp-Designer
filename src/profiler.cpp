@@ -52,6 +52,9 @@ Profiler::Profiler(Processor *prc, Player *plr)
 
   connect(this, &Profiler::warningMessageNeeded, this,
           &Profiler::warningMessageNeededSlot);
+
+  connect(this, &Profiler::errorMessageNeeded, this,
+          &Profiler::errorMessageNeededSlot);
 }
 
 void Profiler::loadResponseFile(QString fileName)
@@ -61,7 +64,7 @@ void Profiler::loadResponseFile(QString fileName)
   SF_INFO sfinfo;
   sfinfo.format = 0;
 
-  SNDFILE *responseSndFile = sf_open(fileName.toUtf8(), SFM_READ, &sfinfo);
+  SNDFILE *responseSndFile = sf_open(fileName.toLocal8Bit(), SFM_READ, &sfinfo);
   if (responseSndFile != NULL)
   {
     responseDataSamplerate = sfinfo.samplerate;
@@ -83,10 +86,11 @@ QVector<float> Profiler::loadRealTestFile(QVector<float> testSignal, float sampl
   int realTestDataSamplerate;
 
   QDir profilesDir(QCoreApplication::applicationDirPath());
-  profilesDir.cdUp();
-  profilesDir.cd("share/tubeAmp Designer");
+  //profilesDir.cdUp();
+  //profilesDir.cd("share/tubeAmp Designer");
+  profilesDir.cd("data");
   SNDFILE *realTestSndFile = sf_open(QString(profilesDir.absolutePath() +
-                                     "/real_test.wav").toUtf8(),
+                                     "/real_test.wav").toLocal8Bit(),
                                      SFM_READ, &sfinfo);
   if (realTestSndFile != NULL)
   {
@@ -213,10 +217,7 @@ void Profiler::analyze(ProfilerPresetType preset)
 
   if (responseData.size() < (int)((3285485.0 * (double)responseDataSamplerate) / 44100.0 + 1))
   {
-    QMessageBox::critical(nullptr, QObject::tr("Error!"),
-                         tr("Response file is too short!"),
-                         QMessageBox::Ok,
-                         QMessageBox::Ok);
+    errorMessageNeeded(tr("Response file is too short!"));
     return;
   }
 
@@ -697,9 +698,9 @@ void Profiler::analyze(ProfilerPresetType preset)
   backProcessor->setProfile(profile);
 
   // DIRTY HACK!!!
-  // Run Auto-Equalizer 4 times to improve accuracy.
+  // Run Auto-Equalizer 5 times to improve accuracy.
   // TODO: correct AutoEqualizer code so that one run is enough
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 5; i++)
   {
     backProcessor->setPreampImpulse(processor->getPreampImpulse());
     backProcessor->setCabinetImpulse(processor->getLeftImpulse(), processor->getRightImpulse());
@@ -836,7 +837,7 @@ void Profiler::analyze(ProfilerPresetType preset)
     QVector<float> processedDataR(player->diData.size());
 
     QSharedPointer<Processor> backProcessor
-    = QSharedPointer<Processor>(new Processor(processor->getSamplingRate()));
+      = QSharedPointer<Processor>(new Processor(processor->getSamplingRate()));
 
     backProcessor->loadProfile(processor->getProfileFileName());
 
@@ -1015,7 +1016,7 @@ void Profiler::createTestFile_v1(QString fileName)
   sfinfo.sections = 1;
   sfinfo.seekable = 1;
 
-  SNDFILE *testFile = sf_open(fileName.toUtf8().constData(), SFM_WRITE, &sfinfo);
+  SNDFILE *testFile = sf_open(fileName.toLocal8Bit().constData(), SFM_WRITE, &sfinfo);
 
   if (testFile != NULL)
   {
@@ -1036,4 +1037,12 @@ void Profiler::warningMessageNeededSlot(QString message)
                                message,
                                QMessageBox::Ok,
                                QMessageBox::Ok);
+}
+
+void Profiler::errorMessageNeededSlot(QString message)
+{
+  QMessageBox::critical(nullptr, QObject::tr("Error!"),
+                        message,
+                        QMessageBox::Ok,
+                        QMessageBox::Ok);
 }

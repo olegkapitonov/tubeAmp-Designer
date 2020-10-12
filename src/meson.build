@@ -27,7 +27,7 @@ moc_files = qt5.preprocess(moc_headers : ['mainwindow.h',
                            include_directories: inc,
                            dependencies: qt5_dep)
 
-translations = qt5.compile_translations(ts_files : 'tAD_ru_RU.ts', build_by_default : true,
+translations = qt5.compile_translations(ts_files : 'tAD_ru.ts', build_by_default : true,
 install: true, install_dir : get_option('datadir') / 'tubeAmp Designer/translations')
 
 executable('tAD', 'main.cpp',
@@ -57,9 +57,11 @@ executable('tAD', 'main.cpp',
                      'convolver_dialog.cpp',
                      'deconvolver_dialog.cpp',
                      'tameter.cpp',
+                     '../thirdparty/zita-convolver.cpp',
         moc_files,
         kpp_tubeamp_dsp,
         install: true,
            include_directories: inc,
-           dependencies : [qt5_dep, gsl_dep, thread_dep, zita_convolver_dep,
-                           fftw3_dep, fftw3f_dep, jack_dep, sndfile_dep, zita_resampler_dep])
+           dependencies : [qt5_dep, gsl_dep, thread_dep,
+                           fftw3_dep, fftw3f_dep, portaudio_dep, sndfile_dep],
+           link_args : [ '-Wl,-subsystem,windows'])

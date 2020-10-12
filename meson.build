@@ -7,14 +7,11 @@ qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'])
 gsl_dep = dependency('gsl')
 fftw3_dep = dependency('fftw3')
 fftw3f_dep = dependency('fftw3f')
-jack_dep = dependency('jack')
+portaudio_dep = dependency('portaudio-2.0')
 sndfile_dep = dependency('sndfile')
 thread_dep = dependency('threads')
 
 cc = meson.get_compiler('cpp')
-zita_convolver_dep = cc.find_library('zita-convolver')
-zita_resampler_dep = cc.find_library('zita-resampler')
-
 inc = include_directories('.')
 
 install_data('data/real_test.wav', install_dir : get_option('datadir') / 'tubeAmp Designer')

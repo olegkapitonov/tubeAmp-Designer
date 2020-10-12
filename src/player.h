@@ -29,9 +29,7 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include <jack/jack.h>
-#include <jack/types.h>
-#include <jack/session.h>
+#include <portaudio.h>
 
 #include "processor.h"
 
@@ -57,15 +55,14 @@ public:
   Player();
   ~Player();
 
-  jack_port_t *input_port;
-  jack_port_t *output_port_left;
-  jack_port_t *output_port_right;
+  PaStreamParameters inputParameters, outputParameters;
+  PaStream *stream;
+  PaError err;
 
-  jack_client_t *client;
   int simple_quit;
 
   void setProcessor(Processor *prc);
-  int connectToJack();
+  int connectToPortAudio();
   int activate();
 
   void setLevel(float lev);
