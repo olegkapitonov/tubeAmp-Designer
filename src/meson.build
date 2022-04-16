@@ -27,8 +27,6 @@ moc_files = qt5.preprocess(moc_headers : ['mainwindow.h',
                            include_directories: inc,
                            dependencies: qt5_dep)
 
-translations = qt5.compile_translations(ts_files : 'tAD_ru_RU.ts', build_by_default : true,
-install: true, install_dir : get_option('datadir') / 'tubeAmp Designer/translations')
 
 executable('tAD', 'main.cpp',
                      'mainwindow.cpp',
